@@ -4,6 +4,7 @@ function DashboardPage({
   theme,
   setTheme,
   handleAvatarUpload,
+  handleRemoveAvatar,
   profileStatus,
   profileError,
   resetSession,
@@ -89,18 +90,32 @@ function DashboardPage({
                     onClick={handleSaveDisplayName}
                     disabled={!canSaveDisplayName || savingSection === "display-name"}
                   >
-                    {savingSection === "display-name" ? "Saving..." : "Update"}
+                    {savingSection === "display-name" ? "Saving..." : "Update name"}
                   </button>
                 </div>
                 <p className="muted">Mobile: {user.mobile || "—"}</p>
-                <label className="upload-btn small">
-                  Upload photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                  />
-                </label>
+                <div className="photo-actions">
+                  <label className="upload-btn small">
+                    {about.avatar ? "Update profile photo" : "Upload profile photo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                    />
+                  </label>
+                  {about.avatar && (
+                    <button
+                      type="button"
+                      className="remove-photo-btn"
+                      onClick={handleRemoveAvatar}
+                      disabled={savingSection === "about"}
+                    >
+                      {savingSection === "about"
+                        ? "Removing..."
+                        : "Remove profile photo"}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -130,21 +145,6 @@ function DashboardPage({
               key={group.key}
             >
               <p className="nav-group-title">{group.title}</p>
-              {group.key === "profile-setup" && (
-                <div className="profile-mobile-select-wrap">
-                  <select
-                    className="profile-mobile-select"
-                    value={activeTab}
-                    onChange={(e) => setActiveTab(e.target.value)}
-                  >
-                    {group.tabs.map((key) => (
-                      <option key={key} value={key}>
-                        {TAB_LABELS[key]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div
                 className={`nav-group-list ${group.key === "profile-setup" ? "profile-scroll-tabs" : ""}`}
               >

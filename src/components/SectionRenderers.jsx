@@ -1,3 +1,4 @@
+import AnalyticsPanel from './AnalyticsPanel'
 import ConsultationsPanel from './ConsultationsPanel'
 import {
   arrayFromCsv,
@@ -52,6 +53,17 @@ export const getSectionRenderers = (adminData) => {
     ownerHeroError,
     ownerProjectsStatus,
     ownerProjectsError,
+    analyticsDashboard,
+    analyticsStatus,
+    analyticsError,
+    analyticsFilters,
+    selectedVisitorKey,
+    visitorJourney,
+    visitorJourneyStatus,
+    visitorJourneyError,
+    handleSetAnalyticsFilters,
+    handleRefreshAnalytics,
+    handleSelectAnalyticsVisitor,
     managedUsers,
     managedUsersStatus,
     managedUsersError,
@@ -91,6 +103,16 @@ export const getSectionRenderers = (adminData) => {
     setManagedUserPasswordDraft,
     toggleManagedUserPasswordVisibility,
     handleResetManagedUserPassword,
+    passwordStatus,
+    passwordUpdateStatus,
+    passwordError,
+    passwordUpdateError,
+    passwordForm,
+    setPasswordForm,
+    passwordVisibility,
+    togglePasswordVisibility,
+    handleUpdateMyPassword,
+    fetchMyPasswordMeta,
   } = adminData
 
   return {
@@ -325,6 +347,99 @@ export const getSectionRenderers = (adminData) => {
           disabled={savingSection === 'experience'}
         >
           {savingSection === 'experience' ? 'Saving…' : 'Save Experience'}
+        </button>
+      </div>
+    ),
+    password: () => (
+      <div className="section">
+        <SectionHeader
+          title="Update Password"
+          cta={
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => dispatch(fetchMyPasswordMeta())}
+              disabled={passwordStatus === 'loading' || savingSection === 'password'}
+            >
+              {passwordStatus === 'loading' ? 'Refreshing…' : 'Refresh'}
+            </button>
+          }
+        />
+
+        {passwordError && <p className="error">{passwordError}</p>}
+
+        <label className="field">
+          <span>Your current password</span>
+          <div className="password-inline-row">
+            <input
+              type={passwordVisibility.current ? 'text' : 'password'}
+              value={passwordForm.currentPassword}
+              onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+              placeholder="Enter your current password"
+              autoComplete="current-password"
+            />
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => togglePasswordVisibility('current')}
+            >
+              {passwordVisibility.current ? '🙈' : '👁'}
+            </button>
+          </div>
+        </label>
+
+        <div className="grid two">
+          <label className="field">
+            <span>New password</span>
+            <div className="password-inline-row">
+              <input
+                type={passwordVisibility.next ? 'text' : 'password'}
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                placeholder="Minimum 8 characters"
+                autoComplete="new-password"
+              />
+              <button
+                className="ghost"
+                type="button"
+                onClick={() => togglePasswordVisibility('next')}
+              >
+                {passwordVisibility.next ? '🙈' : '👁'}
+              </button>
+            </div>
+          </label>
+          <label className="field">
+            <span>Confirm password</span>
+            <div className="password-inline-row">
+              <input
+                type={passwordVisibility.confirm ? 'text' : 'password'}
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                placeholder="Re-enter new password"
+                autoComplete="new-password"
+              />
+              <button
+                className="ghost"
+                type="button"
+                onClick={() => togglePasswordVisibility('confirm')}
+              >
+                {passwordVisibility.confirm ? '🙈' : '👁'}
+              </button>
+            </div>
+          </label>
+        </div>
+
+        {passwordUpdateError && <p className="error">{passwordUpdateError}</p>}
+
+        <button
+          className="primary"
+          type="button"
+          onClick={handleUpdateMyPassword}
+          disabled={savingSection === 'password' || passwordUpdateStatus === 'loading'}
+        >
+          {savingSection === 'password' || passwordUpdateStatus === 'loading'
+            ? 'Updating…'
+            : 'Update Password'}
         </button>
       </div>
     ),
@@ -1074,9 +1189,25 @@ export const getSectionRenderers = (adminData) => {
         </button>
       </div>
     ),
+    analytics: () => (
+      <AnalyticsPanel
+        isOwner={isOwner}
+        status={analyticsStatus}
+        error={analyticsError}
+        dashboard={analyticsDashboard}
+        filters={analyticsFilters}
+        selectedVisitorKey={selectedVisitorKey}
+        visitorJourney={visitorJourney}
+        visitorJourneyStatus={visitorJourneyStatus}
+        visitorJourneyError={visitorJourneyError}
+        onSetFilters={handleSetAnalyticsFilters}
+        onRefresh={handleRefreshAnalytics}
+        onSelectVisitor={handleSelectAnalyticsVisitor}
+      />
+    ),
     consultations: () => <ConsultationsPanel />,
     users: () => (
-      <div className="section">
+      <div className="section user-management-section">
         <SectionHeader
           title="User Management"
           cta={
@@ -1127,7 +1258,7 @@ export const getSectionRenderers = (adminData) => {
                   </div>
                 </div>
                 {isPending && (
-                  <div className="service-actions user-actions">
+                  <div className="service-actions user-actions user-management-actions">
                     <button
                       className="primary"
                       type="button"
@@ -1150,7 +1281,7 @@ export const getSectionRenderers = (adminData) => {
                     </button>
                   </div>
                 )}
-                <div className="service-actions user-actions">
+                <div className="service-actions user-actions user-management-actions">
                   {!isOwnerAccount && (
                     <div className="user-password-row">
                       <input

@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearError, logout } from "../store/slices/authSlice";
 import {
+  setAnalyticsFilters,
+  setSelectedVisitorKey,
+} from "../store/slices/analyticsSlice";
+import {
   fetchMe,
   loginUser,
   registerUser,
@@ -34,6 +38,14 @@ import {
   updateManagedUserApproval,
   updateManagedUserStatus,
 } from "../store/thunks/userManagementThunks";
+import {
+  fetchMyPasswordMeta,
+  updateMyPassword,
+} from "../store/thunks/passwordThunks";
+import {
+  fetchOwnerAnalytics,
+  fetchOwnerVisitorJourney,
+} from "../store/thunks/analyticsThunks";
 import {
   defaultAbout,
   emptyEducation,
@@ -82,6 +94,27 @@ export const useAdminApp = () => {
     status: managedUsersStatus,
     error: managedUsersError,
   } = useSelector((state) => state.userManagement);
+  const {
+    hasPassword,
+    maskedPassword,
+    revealSupported,
+    note: passwordNote,
+    status: passwordStatus,
+    updateStatus: passwordUpdateStatus,
+    error: passwordError,
+    updateError: passwordUpdateError,
+    updateMessage: passwordUpdateMessage,
+  } = useSelector((state) => state.password);
+  const {
+    dashboard: analyticsDashboard,
+    status: analyticsStatus,
+    error: analyticsError,
+    filters: analyticsFilters,
+    selectedVisitorKey,
+    visitorJourney,
+    visitorJourneyStatus,
+    visitorJourneyError,
+  } = useSelector((state) => state.analytics);
 
   useEffect(() => {
     dispatch(fetchMe());
@@ -90,6 +123,7 @@ export const useAdminApp = () => {
   useEffect(() => {
     if (user) {
       dispatch(fetchProfile());
+      dispatch(fetchMyPasswordMeta());
     }
   }, [user, dispatch]);
 
@@ -160,6 +194,17 @@ export const useAdminApp = () => {
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [userPasswordDrafts, setUserPasswordDrafts] = useState({});
   const [showUserPasswords, setShowUserPasswords] = useState({});
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    existing: false,
+    current: false,
+    next: false,
+    confirm: false,
+  });
 
   const userRole = String(user?.role || "").toLowerCase();
   const isOwner = userRole === "owner";
@@ -222,6 +267,19 @@ export const useAdminApp = () => {
     if (!isOwner || !user) return;
     dispatch(fetchManagedUsers());
   }, [dispatch, user, isOwner]);
+
+  useEffect(() => {
+    if (!isOwner || !user) return;
+    dispatch(fetchOwnerAnalytics());
+  }, [dispatch, user, isOwner]);
+
+  useEffect(() => {
+    if (!isOwner || !user || activeTab !== "analytics") return;
+    const timer = window.setInterval(() => {
+      dispatch(fetchOwnerAnalytics());
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, [dispatch, isOwner, user, activeTab]);
 
   useEffect(() => {
     if (!allowedTabs.includes(activeTab)) {
@@ -887,6 +945,29 @@ export const useAdminApp = () => {
     return rest;
   };
 
+  const handleRemoveAvatar = async () => {
+    const previousAvatar = String(about?.avatar || "").trim();
+    if (!previousAvatar) return;
+
+    setAbout((prev) => ({ ...prev, avatar: "" }));
+    try {
+      setSavingSection("about");
+      await dispatch(
+        saveProfile({
+          about: sanitizeAbout({ ...about, avatar: "" }),
+          isFreelanceOpen,
+        }),
+      ).unwrap();
+      setToast("Profile photo removed");
+    } catch (err) {
+      setAbout((prev) => ({ ...prev, avatar: previousAvatar }));
+      setToast(err.message || "Unable to remove photo");
+    } finally {
+      setSavingSection(null);
+      setTimeout(() => setToast(""), 2200);
+    }
+  };
+
   const buildPayload = (section) => {
     switch (section) {
       case "about":
@@ -979,6 +1060,12 @@ export const useAdminApp = () => {
 
   const handleDeleteUser = async (targetUser) => {
     if (!targetUser?.id) return;
+    const targetName = String(targetUser?.fullName || "this user").trim();
+    const isConfirmed = window.confirm(
+      `Delete user ${targetName}? This action cannot be undone.`,
+    );
+    if (!isConfirmed) return;
+
     const tracker = `user-delete-${targetUser.id}`;
     setSavingSection(tracker);
     try {
@@ -1048,6 +1135,73 @@ export const useAdminApp = () => {
     }
   };
 
+  const togglePasswordVisibility = (field) => {
+    setPasswordVisibility((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
+  };
+
+  const handleUpdateMyPassword = async () => {
+    const currentPassword = String(passwordForm.currentPassword || "");
+    const newPassword = String(passwordForm.newPassword || "");
+    const confirmPassword = String(passwordForm.confirmPassword || "");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setToast("Please fill current, new, and confirm password");
+      setTimeout(() => setToast(""), 2200);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setToast("New password must be at least 8 characters");
+      setTimeout(() => setToast(""), 2200);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setToast("Confirm password does not match");
+      setTimeout(() => setToast(""), 2200);
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setToast("New password must be different from current password");
+      setTimeout(() => setToast(""), 2200);
+      return;
+    }
+
+    setSavingSection("password");
+    try {
+      const result = await dispatch(
+        updateMyPassword({
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        }),
+      ).unwrap();
+
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordVisibility((prev) => ({
+        ...prev,
+        current: false,
+        next: false,
+        confirm: false,
+      }));
+      dispatch(fetchMyPasswordMeta());
+      setToast(result?.message || "Password updated");
+    } catch (err) {
+      setToast(err.message || "Unable to update password");
+    } finally {
+      setSavingSection(null);
+      setTimeout(() => setToast(""), 2200);
+    }
+  };
+
   const handleSaveDisplayName = async () => {
     if (!canSaveDisplayName) {
       if (normalizedDisplayNameDraft.length < 2) {
@@ -1067,6 +1221,38 @@ export const useAdminApp = () => {
       setSavingSection(null);
       setTimeout(() => setToast(""), 2200);
     }
+  };
+
+  const handleSetAnalyticsFilters = (nextFilters) => {
+    dispatch(setAnalyticsFilters(nextFilters));
+  };
+
+  const handleRefreshAnalytics = (overrideFilters = {}) => {
+    dispatch(fetchOwnerAnalytics(overrideFilters));
+    if (selectedVisitorKey) {
+      dispatch(
+        fetchOwnerVisitorJourney({
+          visitorKey: selectedVisitorKey,
+          filters: overrideFilters,
+        }),
+      );
+    }
+  };
+
+  const handleSelectAnalyticsVisitor = (visitorKey, overrideFilters = {}) => {
+    const safeVisitorKey = String(visitorKey || "").trim();
+    if (!safeVisitorKey) {
+      dispatch(setSelectedVisitorKey(""));
+      return;
+    }
+
+    dispatch(setSelectedVisitorKey(safeVisitorKey));
+    dispatch(
+      fetchOwnerVisitorJourney({
+        visitorKey: safeVisitorKey,
+        filters: overrideFilters,
+      }),
+    );
   };
 
   return {
@@ -1089,6 +1275,14 @@ export const useAdminApp = () => {
     ownerProjectItems,
     ownerProjectsStatus,
     ownerProjectsError,
+    analyticsDashboard,
+    analyticsStatus,
+    analyticsError,
+    analyticsFilters,
+    selectedVisitorKey,
+    visitorJourney,
+    visitorJourneyStatus,
+    visitorJourneyError,
     managedUsers,
     managedUsersStatus,
     managedUsersError,
@@ -1140,6 +1334,18 @@ export const useAdminApp = () => {
     canSaveDisplayName,
     userPasswordDrafts,
     showUserPasswords,
+    hasPassword,
+    maskedPassword,
+    revealSupported,
+    passwordNote,
+    passwordStatus,
+    passwordUpdateStatus,
+    passwordError,
+    passwordUpdateError,
+    passwordUpdateMessage,
+    passwordForm,
+    setPasswordForm,
+    passwordVisibility,
     canManageServices,
     sectionTitle,
     addItem,
@@ -1160,6 +1366,7 @@ export const useAdminApp = () => {
     handleSaveHeroSlide,
     handleDeleteHeroSlide,
     handleAvatarUpload,
+    handleRemoveAvatar,
     handleSaveSection,
     handleToggleUserStatus,
     handleDeleteUser,
@@ -1167,7 +1374,13 @@ export const useAdminApp = () => {
     setManagedUserPasswordDraft,
     toggleManagedUserPasswordVisibility,
     handleResetManagedUserPassword,
+    togglePasswordVisibility,
+    handleUpdateMyPassword,
     handleSaveDisplayName,
+    handleSetAnalyticsFilters,
+    handleRefreshAnalytics,
+    handleSelectAnalyticsVisitor,
+    fetchMyPasswordMeta,
     fetchManagedUsers,
     fetchOwnerProjects,
   };

@@ -103,6 +103,7 @@ function App() {
                 theme={admin.theme}
                 setTheme={admin.setTheme}
                 handleAvatarUpload={admin.handleAvatarUpload}
+                handleRemoveAvatar={admin.handleRemoveAvatar}
                 profileStatus={admin.profileStatus}
                 profileError={admin.profileError}
                 resetSession={admin.resetSession}

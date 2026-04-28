@@ -147,17 +147,20 @@ export const TAB_LABELS = {
   hero: "Hero",
   consultations: "Consultations",
   users: "Users",
+  analytics: "Web Analytics",
   socials: "Socials",
   contact: "Contact",
+  password: "Update Password",
 };
 
 export const PROFILE_SETUP_TABS = [
   "about",
   "skills",
   "experience",
+  "password",
 ];
-export const PARTNER_PROFILE_TABS = ["about", "skills", "experience"];
-export const OWNER_ACCESS_TABS = ["services", "hero", "ownerProjects", "consultations", "users"];
+export const PARTNER_PROFILE_TABS = ["about", "skills", "experience", "password"];
+export const OWNER_ACCESS_TABS = ["analytics", "services", "hero", "ownerProjects", "consultations", "users"];
 
 export const TAB_GROUPS = [
   { key: "profile-setup", title: "Profile Setup", tabs: PROFILE_SETUP_TABS },

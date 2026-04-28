@@ -37,3 +37,22 @@ export const fetchOwnerConsultations = createAsyncThunk(
     }
   },
 )
+
+export const deleteOwnerConsultation = createAsyncThunk(
+  'consultations/deleteOwnerConsultation',
+  async (consultationId, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token || localStorage.getItem('authToken')
+      if (!token) throw new Error('Not authenticated')
+
+      await authedRequest(`/api/consultations/admin/${consultationId}`, {
+        method: 'DELETE',
+        token,
+      })
+
+      return consultationId
+    } catch (error) {
+      return rejectWithValue(error.message || 'Unable to delete consultation')
+    }
+  },
+)

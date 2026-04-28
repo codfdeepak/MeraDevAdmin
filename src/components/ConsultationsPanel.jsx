@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchOwnerConsultations } from '../store/thunks/consultationThunks'
+import {
+  fetchOwnerConsultations,
+  deleteOwnerConsultation,
+} from '../store/thunks/consultationThunks'
 
 const formatDateTime = (value) => {
   if (!value) return '—'
@@ -12,7 +15,7 @@ const formatDateTime = (value) => {
 
 function ConsultationsPanel() {
   const dispatch = useDispatch()
-  const { items, status, error } = useSelector((state) => state.consultations)
+  const { items, status, error, deleteError, deletingById } = useSelector((state) => state.consultations)
   const userRole = String(useSelector((state) => state.auth.user?.role) || '').toLowerCase()
   const canView = userRole === 'owner' || userRole === 'admin'
 
@@ -28,6 +31,19 @@ function ConsultationsPanel() {
         <p className="muted">Only owner/admin accounts can view consultation requests.</p>
       </div>
     )
+  }
+
+  const handleDelete = (item) => {
+    const consultationId = item?._id
+    if (!consultationId) return
+
+    const userName = String(item?.name || 'this user').trim()
+    const isConfirmed = window.confirm(
+      `Delete consultation request for ${userName}? This action cannot be undone.`,
+    )
+    if (!isConfirmed) return
+
+    dispatch(deleteOwnerConsultation(consultationId))
   }
 
   return (
@@ -46,6 +62,7 @@ function ConsultationsPanel() {
 
       {status === 'loading' && items.length === 0 && <p className="muted">Loading consultations...</p>}
       {error && <p className="error">{error}</p>}
+      {deleteError && <p className="error">{deleteError}</p>}
 
       {status !== 'loading' && items.length === 0 && (
         <p className="muted">No consultation requests yet.</p>
@@ -56,7 +73,17 @@ function ConsultationsPanel() {
           <article className="consultation-card" key={item._id}>
             <div className="consultation-top">
               <h4>{item.name}</h4>
-              <span className="badge">{item.status || 'new'}</span>
+              <div className="item-actions">
+                <span className="badge">{item.status || 'new'}</span>
+                <button
+                  className="link-btn danger"
+                  type="button"
+                  onClick={() => handleDelete(item)}
+                  disabled={Boolean(deletingById?.[item._id])}
+                >
+                  {deletingById?.[item._id] ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
             </div>
 
             <div className="consultation-meta">
