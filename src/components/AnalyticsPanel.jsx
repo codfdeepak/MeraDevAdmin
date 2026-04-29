@@ -9,14 +9,6 @@ const RANGE_OPTIONS = [
   { key: 'custom', label: 'Custom Range' },
 ]
 
-const GRANULARITY_OPTIONS = [
-  { key: 'auto', label: 'Auto' },
-  { key: 'hourly', label: 'Hourly' },
-  { key: 'daily', label: 'Daily' },
-  { key: 'weekly', label: 'Weekly' },
-  { key: 'monthly', label: 'Monthly' },
-]
-
 const DEFAULT_FILTERS = {
   timeRange: 'last_1h',
   startAt: '',
@@ -35,13 +27,6 @@ const EVENT_TYPE_LABELS = {
   error: 'Error',
   session_start: 'Session Start',
   custom: 'Custom',
-}
-
-const STATUS_LABELS = {
-  info: 'Info',
-  pending: 'Pending',
-  success: 'Success',
-  failed: 'Failed',
 }
 
 const numberFormatter = new Intl.NumberFormat('en-IN')
@@ -132,12 +117,13 @@ const SmartTrafficGraph = ({ points, activeIndex, onHoverPoint }) => {
     )
   }
 
-  const width = 1120
-  const height = 340
-  const padLeft = 58
-  const padRight = 34
-  const padTop = 22
-  const padBottom = 48
+  const pointGap = data.length <= 16 ? 46 : data.length <= 32 ? 34 : data.length <= 64 ? 24 : 18
+  const width = Math.max(560, 76 + Math.max(0, data.length - 1) * pointGap)
+  const height = 250
+  const padLeft = 48
+  const padRight = 20
+  const padTop = 20
+  const padBottom = 40
   const chartWidth = width - padLeft - padRight
   const chartHeight = height - padTop - padBottom
   const chartBottom = height - padBottom
@@ -174,95 +160,121 @@ const SmartTrafficGraph = ({ points, activeIndex, onHoverPoint }) => {
   const activePoint = data[safeActiveIndex]
   const activeX = xFor(safeActiveIndex)
   const axisLabelStep = data.length <= 10 ? 1 : data.length <= 22 ? 2 : data.length <= 44 ? 4 : 6
+  const activeXPercent = chartWidth > 0 ? ((activeX - padLeft) / chartWidth) * 100 : 50
+  const tooltipLeft = Math.max(10, Math.min(90, activeXPercent))
 
   return (
     <div className="smart-line-chart smart-line-chart-dark">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Smart website traffic graph">
-        <defs>
-          <linearGradient id="trafficAreaFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#21d4fd" stopOpacity="0.44" />
-            <stop offset="100%" stopColor="#21d4fd" stopOpacity="0.02" />
-          </linearGradient>
-          <linearGradient id="trafficBarFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1ad9ff" stopOpacity="0.62" />
-            <stop offset="100%" stopColor="#1ad9ff" stopOpacity="0.06" />
-          </linearGradient>
-        </defs>
+      {activePoint && (
+        <div className="analytics-graph-tooltip" style={{ left: `${tooltipLeft}%` }}>
+          <strong>{activePoint.label || "Traffic Bucket"}</strong>
+          <p>Visits: {numberFormatter.format(activePoint.visits || 0)}</p>
+          <p>Unique: {numberFormatter.format(activePoint.unique || 0)}</p>
+        </div>
+      )}
 
-        {Array.from({ length: 5 }, (_, idx) => {
-          const ratio = idx / 4
-          const y = padTop + chartHeight * ratio
-          const value = Math.round(maxPoint * (1 - ratio))
-          return (
-            <g key={`grid-${idx}`}>
-              <line x1={padLeft} y1={y} x2={width - padRight} y2={y} className="analytics-grid-line analytics-grid-line-dark" />
-              <text x={12} y={y + 4} className="analytics-axis-label analytics-axis-label-dark">
-                {numberFormatter.format(value)}
-              </text>
+      <div className="smart-line-chart-scroll">
+        <svg
+          className="analytics-traffic-svg"
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label="Smart website traffic graph"
+          style={{ minWidth: `${width}px`, height: `${height}px` }}
+        >
+          <defs>
+            <linearGradient id="trafficAreaFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#21d4fd" stopOpacity="0.44" />
+              <stop offset="100%" stopColor="#21d4fd" stopOpacity="0.02" />
+            </linearGradient>
+            <linearGradient id="trafficBarFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1ad9ff" stopOpacity="0.62" />
+              <stop offset="100%" stopColor="#1ad9ff" stopOpacity="0.06" />
+            </linearGradient>
+          </defs>
+
+          {Array.from({ length: 5 }, (_, idx) => {
+            const ratio = idx / 4
+            const y = padTop + chartHeight * ratio
+            const value = Math.round(maxPoint * (1 - ratio))
+            return (
+              <g key={`grid-${idx}`}>
+                <line x1={padLeft} y1={y} x2={width - padRight} y2={y} className="analytics-grid-line analytics-grid-line-dark" />
+                <text x={16} y={y + 4} className="analytics-axis-label analytics-axis-label-dark">
+                  {numberFormatter.format(value)}
+                </text>
+              </g>
+            )
+          })}
+
+          <path d={areaPath} fill="url(#trafficAreaFill)" className="analytics-area-path" />
+
+          {data.map((item, index) => {
+            const x = xFor(index)
+            return (
+              <line
+                key={`${item.key}-bar`}
+                x1={x}
+                y1={chartBottom}
+                x2={x}
+                y2={yFor(item.visits)}
+                className="analytics-visit-bar"
+              />
+            )
+          })}
+
+          <path d={buildLine('visits')} fill="none" stroke="#21d4fd" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="analytics-line-path analytics-visits-path" />
+          <path d={buildLine('unique')} fill="none" stroke="#de3fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="analytics-line-path analytics-unique-path" />
+
+          {data.map((item, index) => (
+            <g key={`${item.key}-dots`}>
+              <circle cx={xFor(index)} cy={yFor(item.visits)} r="2.1" className="analytics-point-dot analytics-point-dot-visits" />
+              <circle cx={xFor(index)} cy={yFor(item.unique)} r="1.9" className="analytics-point-dot analytics-point-dot-unique" />
             </g>
-          )
-        })}
+          ))}
 
-        <path d={areaPath} fill="url(#trafficAreaFill)" className="analytics-area-path" />
+          {activePoint && (
+            <g>
+              <line
+                x1={activeX}
+                y1={padTop}
+                x2={activeX}
+                y2={chartBottom}
+                className="analytics-active-line"
+              />
+              <circle cx={activeX} cy={yFor(activePoint.visits)} r="4.8" className="analytics-active-dot analytics-active-dot-visits" />
+              <circle cx={activeX} cy={yFor(activePoint.unique)} r="4.2" className="analytics-active-dot analytics-active-dot-unique" />
+            </g>
+          )}
 
-        {data.map((item, index) => {
-          const x = xFor(index)
-          return (
-            <line
-              key={`${item.key}-bar`}
-              x1={x}
-              y1={chartBottom}
-              x2={x}
-              y2={yFor(item.visits)}
-              className="analytics-visit-bar"
-            />
-          )
-        })}
+          {data.map((item, index) => {
+            const x = xFor(index)
+            const shouldShow = index % axisLabelStep === 0 || index === data.length - 1
+            return shouldShow ? (
+              <text key={`${item.key}-label`} x={x} y={height - 14} textAnchor="middle" className="analytics-x-label-dark">
+                {item.label || '-'}
+              </text>
+            ) : null
+          })}
 
-        <path d={buildLine('visits')} fill="none" stroke="#21d4fd" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" className="analytics-line-path analytics-visits-path" />
-        <path d={buildLine('unique')} fill="none" stroke="#de3fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="analytics-line-path analytics-unique-path" />
-
-        {activePoint && (
-          <g>
-            <line
-              x1={activeX}
-              y1={padTop}
-              x2={activeX}
-              y2={chartBottom}
-              className="analytics-active-line"
-            />
-            <circle cx={activeX} cy={yFor(activePoint.visits)} r="6" className="analytics-active-dot analytics-active-dot-visits" />
-            <circle cx={activeX} cy={yFor(activePoint.unique)} r="5" className="analytics-active-dot analytics-active-dot-unique" />
-          </g>
-        )}
-
-        {data.map((item, index) => {
-          const x = xFor(index)
-          const shouldShow = index % axisLabelStep === 0 || index === data.length - 1
-          return shouldShow ? (
-            <text key={`${item.key}-label`} x={x} y={height - 14} textAnchor="middle" className="analytics-x-label-dark">
-              {item.label || '-'}
-            </text>
-          ) : null
-        })}
-
-        {data.map((item, index) => {
-          const x = xFor(index)
-          return (
-            <circle
-              key={`${item.key}-hit`}
-              cx={x}
-              cy={chartBottom - chartHeight / 2}
-              r={Math.max(14, chartWidth / Math.max(data.length * 2.6, 4))}
-              className="analytics-hit-area"
-              onMouseEnter={() => onHoverPoint?.(index)}
-              onFocus={() => onHoverPoint?.(index)}
-              tabIndex={0}
-              aria-label={`Traffic bucket ${item.label || index + 1}`}
-            />
-          )
-        })}
-      </svg>
+          {data.map((item, index) => {
+            const x = xFor(index)
+            return (
+              <circle
+                key={`${item.key}-hit`}
+                cx={x}
+                cy={chartBottom - chartHeight / 2}
+                r={Math.max(13, chartWidth / Math.max(data.length * 2.7, 4))}
+                className="analytics-hit-area"
+                onMouseEnter={() => onHoverPoint?.(index)}
+                onTouchStart={() => onHoverPoint?.(index)}
+                onFocus={() => onHoverPoint?.(index)}
+                tabIndex={0}
+                aria-label={`Traffic bucket ${item.label || index + 1}`}
+              />
+            )
+          })}
+        </svg>
+      </div>
     </div>
   )
 }
@@ -285,7 +297,7 @@ const TopList = ({ title, items, itemKey }) => (
 )
 
 function AnalyticsPanel({
-  isOwner,
+  canAccessAnalytics,
   status,
   error,
   dashboard,
@@ -313,12 +325,7 @@ function AnalyticsPanel({
   const summary = dashboard?.summary || {}
   const timelineData = asList(dashboard?.timeline)
   const topPages = asList(dashboard?.topPages)
-  const topActions = asList(dashboard?.topActions)
-  const eventBreakdown = asList(dashboard?.eventBreakdown)
   const pageTraffic = asList(dashboard?.pageTraffic).slice(0, 12)
-  const availablePaths = asList(dashboard?.availableFilters?.paths)
-  const availableEventTypes = asList(dashboard?.availableFilters?.eventTypes)
-  const availableStatuses = asList(dashboard?.availableFilters?.statuses)
   const visitorItems = asList(dashboard?.visitorOverview?.items)
 
   const smartTimeline = useMemo(
@@ -340,6 +347,20 @@ function AnalyticsPanel({
         ? activeBucketIndex
         : smartTimeline.length - 1
     ] || null
+  const peakVisitsBucket = smartTimeline.reduce(
+    (best, item) => (!best || Number(item.visits || 0) > Number(best.visits || 0) ? item : best),
+    null,
+  )
+  const peakUniqueBucket = smartTimeline.reduce(
+    (best, item) => (!best || Number(item.unique || 0) > Number(best.unique || 0) ? item : best),
+    null,
+  )
+  const averageVisits = smartTimeline.length
+    ? Math.round(
+      smartTimeline.reduce((sum, item) => sum + Number(item.visits || 0), 0) /
+          smartTimeline.length,
+    )
+    : 0
 
   const metricItems = [
     { label: 'Total Visitors', value: summary.uniqueVisitors || 0 },
@@ -403,8 +424,8 @@ function AnalyticsPanel({
     onSelectVisitor?.(selected)
   }, [dashboard?.generatedAt, selectedVisitorKey, visitorItems, onSelectVisitor])
 
-  if (!isOwner) {
-    return <p className="muted">Only owner account can access web analytics.</p>
+  if (!canAccessAnalytics) {
+    return <p className="muted">Owner has not enabled web analytics access for your account yet.</p>
   }
 
   const setDraftValue = (key, value) => {
@@ -441,8 +462,6 @@ function AnalyticsPanel({
     onRefresh?.(DEFAULT_FILTERS)
   }
 
-  const appliedGranularity = dashboard?.filtersApplied?.chartGranularity || draft.chartGranularity || 'auto'
-
   return (
     <div className="section analytics-section">
       <div className="section-head">
@@ -471,66 +490,6 @@ function AnalyticsPanel({
         ))}
       </div>
 
-      <div className="analytics-filter-grid">
-        <label className="field">
-          <span>Event Type</span>
-          <select
-            value={draft.eventType || 'all'}
-            onChange={(e) => setDraftValue('eventType', e.target.value)}
-          >
-            <option value="all">All Events</option>
-            {availableEventTypes.map((type) => (
-              <option key={type} value={type}>
-                {EVENT_TYPE_LABELS[type] || type}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="field">
-          <span>Status</span>
-          <select
-            value={draft.status || 'all'}
-            onChange={(e) => setDraftValue('status', e.target.value)}
-          >
-            {availableStatuses.map((item) => (
-              <option key={item} value={item}>
-                {item === 'all' ? 'All Statuses' : STATUS_LABELS[item] || item}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="field">
-          <span>Page / Path</span>
-          <select
-            value={draft.path || 'all'}
-            onChange={(e) => setDraftValue('path', e.target.value)}
-          >
-            <option value="all">All Pages</option>
-            {availablePaths.map((item) => (
-              <option key={item.path} value={item.path}>
-                {item.path} ({numberFormatter.format(item.count || 0)})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="field">
-          <span>Graph Granularity</span>
-          <select
-            value={draft.chartGranularity || 'auto'}
-            onChange={(e) => setDraftValue('chartGranularity', e.target.value)}
-          >
-            {GRANULARITY_OPTIONS.map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
       {String(draft.timeRange) === 'custom' && (
         <div className="analytics-custom-range-grid">
           <label className="field">
@@ -556,16 +515,23 @@ function AnalyticsPanel({
         <button className="primary analytics-apply-btn" type="button" onClick={applyFilters} disabled={status === 'loading'}>
           Apply Filters
         </button>
-        <button className="ghost analytics-reset-btn" type="button" onClick={resetFilters} disabled={status === 'loading'}>
+        <button className="analytics-reset-btn" type="button" onClick={resetFilters} disabled={status === 'loading'}>
           Reset
         </button>
         {hasFilterChanges && <span className="muted">Unsaved filter changes</span>}
       </div>
 
       <div className="analytics-meta-row">
-        <span className="pill">Timezone: {dashboard?.timezone || 'UTC'}</span>
-        <span className="pill">Range: {dashboard?.filtersApplied?.startAt ? new Date(dashboard.filtersApplied.startAt).toLocaleString() : '—'} to {dashboard?.filtersApplied?.endAt ? new Date(dashboard.filtersApplied.endAt).toLocaleString() : '—'}</span>
-        <span className="pill">Graph Mode: {appliedGranularity}</span>
+        <span className="pill analytics-meta-pill">
+          <span className="analytics-meta-label">Timezone:</span>
+          <span className="analytics-meta-value">{dashboard?.timezone || 'UTC'}</span>
+        </span>
+        <span className="pill analytics-meta-pill analytics-meta-pill-range">
+          <span className="analytics-meta-label">Range:</span>
+          <span className="analytics-meta-value">
+            {dashboard?.filtersApplied?.startAt ? new Date(dashboard.filtersApplied.startAt).toLocaleString() : '—'} to {dashboard?.filtersApplied?.endAt ? new Date(dashboard.filtersApplied.endAt).toLocaleString() : '—'}
+          </span>
+        </span>
       </div>
 
       <div className="analytics-visual-grid analytics-visual-grid-single">
@@ -600,6 +566,21 @@ function AnalyticsPanel({
               <small>UNIQUE USERS</small>
               <strong>{numberFormatter.format(selectedBucket?.unique || 0)}</strong>
             </div>
+            <div className="analytics-smart-footer-card peak">
+              <small>PEAK VISITS</small>
+              <strong>{numberFormatter.format(peakVisitsBucket?.visits || 0)}</strong>
+              <span>{peakVisitsBucket?.label || '-'}</span>
+            </div>
+            <div className="analytics-smart-footer-card peak-unique">
+              <small>PEAK UNIQUE</small>
+              <strong>{numberFormatter.format(peakUniqueBucket?.unique || 0)}</strong>
+              <span>{peakUniqueBucket?.label || '-'}</span>
+            </div>
+            <div className="analytics-smart-footer-card avg">
+              <small>AVG VISITS</small>
+              <strong>{numberFormatter.format(averageVisits || 0)}</strong>
+              <span>Per interval</span>
+            </div>
           </div>
         </div>
       </div>
@@ -616,11 +597,11 @@ function AnalyticsPanel({
       <section className="analytics-visitor-explorer">
         <div className="analytics-visitors-list-card">
           <div className="analytics-visitor-card-head">
-            <h4>Visitor Records</h4>
-            <span className="pill small">{numberFormatter.format(dashboard?.visitorOverview?.totalVisitors || 0)} Visitors</span>
+            <h4 className="analytics-user-heading analytics-user-heading-list">User Records</h4>
+            <span className="pill small">{numberFormatter.format(dashboard?.visitorOverview?.totalVisitors || 0)} Users</span>
           </div>
 
-          {!visitorItems.length && <p className="muted">No visitors found in current filter range.</p>}
+          {!visitorItems.length && <p className="muted">No users found in current filter range.</p>}
 
           {!!visitorItems.length && (
             <ul className="analytics-visitor-list">
@@ -639,6 +620,7 @@ function AnalyticsPanel({
                       </div>
                       <div className="analytics-visitor-row-meta">
                         <span>Last: {formatShortDateTime(visitor.lastSeenAt)}</span>
+                        <span>Area: {visitor.primaryArea || 'Unknown Area'}</span>
                         <span>Pages: {numberFormatter.format(visitor.pageViews || 0)}</span>
                         <span>Clicks: {numberFormatter.format(visitor.clicks || 0)}</span>
                         <span>Unique Pages: {numberFormatter.format(visitor.uniquePages || 0)}</span>
@@ -653,20 +635,20 @@ function AnalyticsPanel({
 
         <div className="analytics-visitor-detail-card">
           <div className="analytics-visitor-card-head">
-            <h4>Visitor Activity Timeline</h4>
+            <h4 className="analytics-user-heading analytics-user-heading-timeline">User Activity Timeline</h4>
             {selectedVisitorSummary && (
               <span className="pill small">{selectedVisitorSummary.displayId || selectedVisitorSummary.visitorKey}</span>
             )}
           </div>
 
-          {!selectedVisitorSummary && <p className="muted">Select any visitor from left to inspect full journey.</p>}
+          {!selectedVisitorSummary && <p className="muted">Select any user from left to inspect full journey.</p>}
 
           {selectedVisitorSummary && visitorJourneyStatus === 'loading' && (
-            <p className="muted">Loading selected visitor activity...</p>
+            <p className="muted">Loading selected user activity...</p>
           )}
 
           {selectedVisitorSummary && visitorJourneyStatus === 'failed' && (
-            <p className="error">{visitorJourneyError || 'Unable to load visitor journey.'}</p>
+            <p className="error">{visitorJourneyError || 'Unable to load user journey.'}</p>
           )}
 
           {selectedVisitorSummary && visitorJourneyStatus !== 'loading' && hasJourneyForSelected && (
@@ -688,11 +670,15 @@ function AnalyticsPanel({
                   <small>Total Events</small>
                   <strong>{numberFormatter.format(visitorJourney?.totalEvents || 0)}</strong>
                 </div>
+                <div className="analytics-visitor-summary-pill">
+                  <small>Primary Area</small>
+                  <strong>{visitorJourney?.primaryArea || selectedVisitorSummary?.primaryArea || 'Unknown Area'}</strong>
+                </div>
               </div>
 
               <div className="analytics-visitor-subgrid">
                 <div className="analytics-visitor-subcard">
-                  <h5>Top Pages This Visitor Opened</h5>
+                  <h5 className="analytics-user-subheading analytics-user-subheading-pages">Top Pages Opened by User</h5>
                   {!asList(visitorJourney?.topPages).length && <p className="muted">No pages captured.</p>}
                   {!!asList(visitorJourney?.topPages).length && (
                     <ul className="analytics-top-list">
@@ -707,7 +693,7 @@ function AnalyticsPanel({
                 </div>
 
                 <div className="analytics-visitor-subcard">
-                  <h5>Page Journey Sequence</h5>
+                  <h5 className="analytics-user-subheading analytics-user-subheading-journey">User Journey Sequence</h5>
                   {!asList(visitorJourney?.pageSequence).length && <p className="muted">No page-sequence available.</p>}
                   {!!asList(visitorJourney?.pageSequence).length && (
                     <ul className="analytics-journey-list">
@@ -723,7 +709,7 @@ function AnalyticsPanel({
               </div>
 
               <div className="analytics-activity-feed-card">
-                <h5>Detailed Activities</h5>
+                <h5 className="analytics-user-subheading analytics-user-subheading-activity">Detailed Activities</h5>
                 {!asList(visitorJourney?.activities).length && <p className="muted">No detailed activity captured.</p>}
                 {!!asList(visitorJourney?.activities).length && (
                   <ul className="analytics-activity-list">
@@ -731,7 +717,7 @@ function AnalyticsPanel({
                       <li key={`${item.occurredAt}-${item.eventType}-${index}`}>
                         <div>
                           <strong>{item.activityLabel || EVENT_TYPE_LABELS[item.eventType] || item.eventType}</strong>
-                          <p>{item.path || item.label || item.action || '-'}</p>
+                          <p>{item.pageLabel || item.path || item.label || item.action || '-'}</p>
                         </div>
                         <span>{formatShortDateTime(item.occurredAt)}</span>
                       </li>
@@ -746,17 +732,6 @@ function AnalyticsPanel({
 
       <div className="analytics-insights-grid">
         <TopList title="Top Pages" items={topPages} itemKey="path" />
-        <TopList title="Top Actions" items={topActions} itemKey="action" />
-        <TopList
-          title="Event Type Split"
-          items={eventBreakdown
-            .filter((item) => item.eventType !== 'api_call')
-            .map((item) => ({
-              eventType: EVENT_TYPE_LABELS[item.eventType] || item.eventType,
-              count: item.count,
-            }))}
-          itemKey="eventType"
-        />
       </div>
 
       <div className="analytics-page-table-card">
@@ -778,12 +753,12 @@ function AnalyticsPanel({
               <tbody>
                 {pageTraffic.map((row) => (
                   <tr key={row.path}>
-                    <td title={row.path}>{row.path}</td>
-                    <td>{numberFormatter.format(row.total || 0)}</td>
-                    <td>{numberFormatter.format(row.pageViews || 0)}</td>
-                    <td>{numberFormatter.format(row.clicks || 0)}</td>
-                    <td>{numberFormatter.format(row.forms || 0)}</td>
-                    <td>{numberFormatter.format(row.errors || 0)}</td>
+                    <td title={row.path} data-label="Path">{row.path}</td>
+                    <td data-label="Total">{numberFormatter.format(row.total || 0)}</td>
+                    <td data-label="Views">{numberFormatter.format(row.pageViews || 0)}</td>
+                    <td data-label="Clicks">{numberFormatter.format(row.clicks || 0)}</td>
+                    <td data-label="Forms">{numberFormatter.format(row.forms || 0)}</td>
+                    <td data-label="Errors">{numberFormatter.format(row.errors || 0)}</td>
                   </tr>
                 ))}
               </tbody>

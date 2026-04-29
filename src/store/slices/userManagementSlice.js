@@ -3,6 +3,7 @@ import {
   deleteManagedUser,
   fetchManagedUsers,
   resetManagedUserPassword,
+  updateManagedUserAnalyticsAccess,
   updateManagedUserApproval,
   updateManagedUserStatus,
 } from '../thunks/userManagementThunks'
@@ -62,6 +63,22 @@ const userManagementSlice = createSlice({
       .addCase(updateManagedUserApproval.rejected, (state, action) => {
         state.status = 'failed'
         state.error = action.payload || 'Unable to update user approval'
+      })
+      .addCase(updateManagedUserAnalyticsAccess.pending, (state) => {
+        state.status = 'loading'
+        state.error = null
+      })
+      .addCase(updateManagedUserAnalyticsAccess.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        if (action.payload?.id) {
+          state.items = state.items.map((item) =>
+            item.id === action.payload.id ? action.payload : item,
+          )
+        }
+      })
+      .addCase(updateManagedUserAnalyticsAccess.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = action.payload || 'Unable to update user analytics access'
       })
       .addCase(deleteManagedUser.pending, (state) => {
         state.status = 'loading'

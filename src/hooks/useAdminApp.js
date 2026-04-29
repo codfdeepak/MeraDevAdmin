@@ -35,6 +35,7 @@ import {
   deleteManagedUser,
   fetchManagedUsers,
   resetManagedUserPassword,
+  updateManagedUserAnalyticsAccess,
   updateManagedUserApproval,
   updateManagedUserStatus,
 } from "../store/thunks/userManagementThunks";
@@ -208,8 +209,12 @@ export const useAdminApp = () => {
 
   const userRole = String(user?.role || "").toLowerCase();
   const isOwner = userRole === "owner";
+  const canViewAnalytics = isOwner || user?.featureAccess?.webAnalytics === true;
   const canManageServices = userRole === "owner" || userRole === "admin";
-  const tabGroups = useMemo(() => getTabGroupsForRole(userRole), [userRole]);
+  const tabGroups = useMemo(
+    () => getTabGroupsForRole(userRole, user?.featureAccess || {}),
+    [userRole, user?.featureAccess],
+  );
   const allowedTabs = useMemo(
     () => tabGroups.flatMap((group) => group.tabs),
     [tabGroups],
@@ -269,17 +274,17 @@ export const useAdminApp = () => {
   }, [dispatch, user, isOwner]);
 
   useEffect(() => {
-    if (!isOwner || !user) return;
+    if (!canViewAnalytics || !user) return;
     dispatch(fetchOwnerAnalytics());
-  }, [dispatch, user, isOwner]);
+  }, [dispatch, user, canViewAnalytics]);
 
   useEffect(() => {
-    if (!isOwner || !user || activeTab !== "analytics") return;
+    if (!canViewAnalytics || !user || activeTab !== "analytics") return;
     const timer = window.setInterval(() => {
       dispatch(fetchOwnerAnalytics());
     }, 60000);
     return () => window.clearInterval(timer);
-  }, [dispatch, isOwner, user, activeTab]);
+  }, [dispatch, canViewAnalytics, user, activeTab]);
 
   useEffect(() => {
     if (!allowedTabs.includes(activeTab)) {
@@ -1099,6 +1104,30 @@ export const useAdminApp = () => {
     }
   };
 
+  const handleUpdateUserAnalyticsAccess = async (targetUser, webAnalytics) => {
+    if (!targetUser?.id) return;
+    const tracker = `user-feature-analytics-${targetUser.id}`;
+    setSavingSection(tracker);
+    try {
+      await dispatch(
+        updateManagedUserAnalyticsAccess({
+          userId: targetUser.id,
+          webAnalytics,
+        }),
+      ).unwrap();
+      setToast(
+        webAnalytics
+          ? "Web analytics access enabled"
+          : "Web analytics access disabled",
+      );
+    } catch (err) {
+      setToast(err.message || "Unable to update web analytics access");
+    } finally {
+      setSavingSection(null);
+      setTimeout(() => setToast(""), 2200);
+    }
+  };
+
   const setManagedUserPasswordDraft = (userId, value) => {
     if (!userId) return;
     setUserPasswordDrafts((prev) => ({ ...prev, [userId]: value }));
@@ -1287,6 +1316,7 @@ export const useAdminApp = () => {
     managedUsersStatus,
     managedUsersError,
     isOwner,
+    canViewAnalytics,
     tabGroups,
     allowedTabs,
     loginData,
@@ -1371,6 +1401,7 @@ export const useAdminApp = () => {
     handleToggleUserStatus,
     handleDeleteUser,
     handleUpdateUserApproval,
+    handleUpdateUserAnalyticsAccess,
     setManagedUserPasswordDraft,
     toggleManagedUserPasswordVisibility,
     handleResetManagedUserPassword,

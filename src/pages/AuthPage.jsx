@@ -31,7 +31,10 @@ function AuthPage({
       </div>
       <div className="hero-panel panel auth-card" style={{ marginBottom: 14 }}>
         <div className="auth-logo">
-          <img src={theme === "dark" ? logoDark : logoLight} alt="Brand logo" />
+          <img
+            src={theme === "dark" ? logoDark : logoLight}
+            alt="MeraDev Technologies logo"
+          />
         </div>
         <h1 className="text-center">
           {mode === "login" ? "Admin Access Login" : "Admin Access Sign up"}

@@ -68,6 +68,7 @@ export const getSectionRenderers = (adminData) => {
     managedUsersStatus,
     managedUsersError,
     user,
+    canViewAnalytics,
     serviceDraftLoaded,
     ownerProjectDraftLoaded,
     heroDraftLoaded,
@@ -98,6 +99,7 @@ export const getSectionRenderers = (adminData) => {
     handleToggleUserStatus,
     handleDeleteUser,
     handleUpdateUserApproval,
+    handleUpdateUserAnalyticsAccess,
     userPasswordDrafts,
     showUserPasswords,
     setManagedUserPasswordDraft,
@@ -1191,7 +1193,7 @@ export const getSectionRenderers = (adminData) => {
     ),
     analytics: () => (
       <AnalyticsPanel
-        isOwner={isOwner}
+        canAccessAnalytics={canViewAnalytics}
         status={analyticsStatus}
         error={analyticsError}
         dashboard={analyticsDashboard}
@@ -1238,6 +1240,9 @@ export const getSectionRenderers = (adminData) => {
                   const isProtected = isSelf || isOwnerAccount
                   const approvalStatus = managedUser.approvalStatus || 'approved'
                   const isPending = approvalStatus === 'pending'
+                  const hasAnalyticsAccess = managedUser?.featureAccess?.webAnalytics === true
+                  const analyticsTracker = `user-feature-analytics-${managedUser.id}`
+                  const canManageAnalyticsFeature = !isOwnerAccount && !isPending
 
                   return (
                     <>
@@ -1279,6 +1284,37 @@ export const getSectionRenderers = (adminData) => {
                         ? 'Rejecting…'
                         : 'Reject Request'}
                     </button>
+                  </div>
+                )}
+                {!isOwnerAccount && (
+                  <div className="user-smart-feature-card">
+                    <p className="muted user-smart-feature-title">Smart Features</p>
+                    <div className="user-smart-feature-actions">
+                      <span className="badge user-smart-feature-badge">
+                        Web Analytics: {hasAnalyticsAccess ? 'Enabled' : 'Disabled'}
+                      </span>
+                      <button
+                        className={`user-smart-feature-toggle ${
+                          hasAnalyticsAccess ? 'enabled' : 'disabled'
+                        }`}
+                        type="button"
+                        onClick={() =>
+                          handleUpdateUserAnalyticsAccess(
+                            managedUser,
+                            !hasAnalyticsAccess,
+                          )}
+                        disabled={
+                          !canManageAnalyticsFeature ||
+                          savingSection === analyticsTracker
+                        }
+                      >
+                        {savingSection === analyticsTracker
+                          ? 'Updating…'
+                          : hasAnalyticsAccess
+                            ? 'Disable'
+                            : 'Enable'}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div className="service-actions user-actions user-management-actions">

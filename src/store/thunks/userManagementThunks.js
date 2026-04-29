@@ -80,6 +80,26 @@ export const updateManagedUserApproval = createAsyncThunk(
   },
 )
 
+export const updateManagedUserAnalyticsAccess = createAsyncThunk(
+  'users/updateManagedUserAnalyticsAccess',
+  async ({ userId, webAnalytics }, { getState, rejectWithValue }) => {
+    try {
+      const token = getAuthToken(getState())
+      if (!token) throw new Error('Not authenticated')
+
+      const data = await authedRequest(`/api/auth/users/${userId}/features`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({ webAnalytics }),
+      })
+
+      return data.user
+    } catch (err) {
+      return rejectWithValue(err.message || 'Unable to update user analytics access')
+    }
+  },
+)
+
 export const deleteManagedUser = createAsyncThunk(
   'users/deleteManagedUser',
   async (userId, { getState, rejectWithValue }) => {

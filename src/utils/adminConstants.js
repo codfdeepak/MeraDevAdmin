@@ -161,14 +161,17 @@ export const PROFILE_SETUP_TABS = [
 ];
 export const PARTNER_PROFILE_TABS = ["about", "skills", "experience", "password"];
 export const OWNER_ACCESS_TABS = ["analytics", "services", "hero", "ownerProjects", "consultations", "users"];
+export const SMART_FEATURE_TABS = ["analytics"];
 
 export const TAB_GROUPS = [
   { key: "profile-setup", title: "Profile Setup", tabs: PROFILE_SETUP_TABS },
+  { key: "smart-features", title: "Smart Features", tabs: SMART_FEATURE_TABS },
   { key: "owner-access", title: "Owner Access", tabs: OWNER_ACCESS_TABS },
 ];
 
-export const getTabGroupsForRole = (role) => {
+export const getTabGroupsForRole = (role, featureAccess = {}) => {
   const normalizedRole = String(role || "").toLowerCase();
+  const canViewWebAnalytics = Boolean(featureAccess?.webAnalytics);
   const profileTabs =
     normalizedRole === "partner" ? PARTNER_PROFILE_TABS : PROFILE_SETUP_TABS;
   const groups = [
@@ -180,6 +183,15 @@ export const getTabGroupsForRole = (role) => {
       key: "owner-access",
       title: "Owner Access",
       tabs: OWNER_ACCESS_TABS,
+    });
+    return groups;
+  }
+
+  if (canViewWebAnalytics) {
+    groups.push({
+      key: "smart-features",
+      title: "Smart Features",
+      tabs: SMART_FEATURE_TABS,
     });
   }
 

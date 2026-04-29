@@ -165,12 +165,14 @@ function DashboardPage({
 
         <div className="cms-body">
           <div className="section-meta">
-            <div className="pill">{sectionTitle}</div>
-            <div className="pill">
-              Last updated:{" "}
-              {profile?.updatedAt
-                ? new Date(profile.updatedAt).toLocaleString()
-                : "—"}
+            <div className="pill section-meta-pill section-meta-pill-title">{sectionTitle}</div>
+            <div className="pill section-meta-pill section-meta-pill-updated">
+              <span className="section-meta-label">Last updated:</span>
+              <span className="section-meta-value">
+                {profile?.updatedAt
+                  ? new Date(profile.updatedAt).toLocaleString()
+                  : "—"}
+              </span>
             </div>
           </div>
 
