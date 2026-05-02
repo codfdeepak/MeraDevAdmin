@@ -21,7 +21,6 @@ export const emptyEducation = () => ({
 export const emptySkill = () => ({
   name: "",
   level: "mid",
-  years: "",
   stack: "fullstack",
   keywords: [],
 });

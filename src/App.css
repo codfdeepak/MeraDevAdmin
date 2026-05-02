@@ -687,6 +687,14 @@
   gap: 12px;
 }
 
+.skills-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.skill-card .grid.two {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .item-card {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--panel) 86%, transparent);
@@ -2911,6 +2919,14 @@
 }
 
 @media (max-width: 640px) {
+  .skills-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .skills-grid .skill-card-wide-mobile {
+    grid-column: 1 / -1;
+  }
+
   .dashboard-main-title {
     font-size: 28px;
   }

@@ -279,9 +279,12 @@ export const getSectionRenderers = (adminData) => {
     skills: () => (
       <div className="section">
         <SectionHeader title="Skills" />
-        <div className="stack">
+        <div className="stack skills-grid">
           {skills.map((skill, idx) => (
-            <div className="item-card" key={`skill-${idx}`}>
+            <div
+              className={`item-card skill-card${String(skill.name || '').trim().length > 16 ? ' skill-card-wide-mobile' : ''}`}
+              key={`skill-${idx}`}
+            >
               <div className="item-top">
                 <strong>Skill {idx + 1}</strong>
                 <button
@@ -295,20 +298,11 @@ export const getSectionRenderers = (adminData) => {
               </div>
               <div className="grid two">
                 <label className="field">
-                  <span>Skill</span>
                   <input
+                    aria-label={`Skill ${idx + 1}`}
                     value={skill.name}
                     onChange={(e) => handleArrayField(setSkills, skills, idx, 'name', e.target.value)}
                     placeholder="React"
-                  />
-                </label>
-                <label className="field">
-                  <span>Years of experience</span>
-                  <input
-                    type="number"
-                    value={skill.years}
-                    onChange={(e) => handleArrayField(setSkills, skills, idx, 'years', e.target.value)}
-                    placeholder="2"
                   />
                 </label>
               </div>

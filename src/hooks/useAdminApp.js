@@ -990,9 +990,8 @@ export const useAdminApp = () => {
         };
       case "skills":
         return {
-          skills: skills.map((skill) => ({
+          skills: skills.map(({ years: _years, ...skill }) => ({
             ...skill,
-            years: prepNumber(skill.years),
             keywords: skill.keywords || [],
           })),
         };
