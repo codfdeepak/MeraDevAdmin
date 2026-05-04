@@ -4,6 +4,8 @@ import {
   fetchManagedUsers,
   resetManagedUserPassword,
   updateManagedUserAnalyticsAccess,
+  updateManagedUserPartnerCategory,
+  updateManagedUserPartnerVisibility,
   updateManagedUserApproval,
   updateManagedUserStatus,
 } from '../thunks/userManagementThunks'
@@ -79,6 +81,38 @@ const userManagementSlice = createSlice({
       .addCase(updateManagedUserAnalyticsAccess.rejected, (state, action) => {
         state.status = 'failed'
         state.error = action.payload || 'Unable to update user analytics access'
+      })
+      .addCase(updateManagedUserPartnerVisibility.pending, (state) => {
+        state.status = 'loading'
+        state.error = null
+      })
+      .addCase(updateManagedUserPartnerVisibility.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        if (action.payload?.id) {
+          state.items = state.items.map((item) =>
+            item.id === action.payload.id ? action.payload : item,
+          )
+        }
+      })
+      .addCase(updateManagedUserPartnerVisibility.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = action.payload || 'Unable to update partner page visibility'
+      })
+      .addCase(updateManagedUserPartnerCategory.pending, (state) => {
+        state.status = 'loading'
+        state.error = null
+      })
+      .addCase(updateManagedUserPartnerCategory.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        if (action.payload?.id) {
+          state.items = state.items.map((item) =>
+            item.id === action.payload.id ? action.payload : item,
+          )
+        }
+      })
+      .addCase(updateManagedUserPartnerCategory.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = action.payload || 'Unable to update partner category'
       })
       .addCase(deleteManagedUser.pending, (state) => {
         state.status = 'loading'

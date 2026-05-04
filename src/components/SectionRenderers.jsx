@@ -100,6 +100,8 @@ export const getSectionRenderers = (adminData) => {
     handleDeleteUser,
     handleUpdateUserApproval,
     handleUpdateUserAnalyticsAccess,
+    handleUpdateUserPartnerVisibility,
+    handleUpdateUserPartnerCategory,
     userPasswordDrafts,
     showUserPasswords,
     setManagedUserPasswordDraft,
@@ -1235,7 +1237,24 @@ export const getSectionRenderers = (adminData) => {
                   const approvalStatus = managedUser.approvalStatus || 'approved'
                   const isPending = approvalStatus === 'pending'
                   const hasAnalyticsAccess = managedUser?.featureAccess?.webAnalytics === true
+                  const hasPartnerPageVisibility =
+                    managedUser?.featureAccess?.partnerPageVisible !== false
+                  const selectedPartnerCategory = String(
+                    managedUser?.featureAccess?.partnerCategory ||
+                      (managedUser.role === 'owner' ? 'leadership' : ''),
+                  )
+                  const partnerCategoryTracker = `user-feature-partner-category-${managedUser.id}`
+                  const partnerCategoryOptions = [
+                    { value: 'leadership', label: 'Owner & Management' },
+                    { value: 'tech', label: 'Tech Team' },
+                    { value: 'marketingBusiness', label: 'Marketing & Business' },
+                    { value: 'creativeDesign', label: 'Creative & Design' },
+                  ]
+                  const selectedPartnerCategoryLabel =
+                    partnerCategoryOptions.find((item) => item.value === selectedPartnerCategory)
+                      ?.label || 'Not selected'
                   const analyticsTracker = `user-feature-analytics-${managedUser.id}`
+                  const partnerPageTracker = `user-feature-partner-visibility-${managedUser.id}`
                   const canManageAnalyticsFeature = !isOwnerAccount && !isPending
 
                   return (
@@ -1308,6 +1327,56 @@ export const getSectionRenderers = (adminData) => {
                             ? 'Disable'
                             : 'Enable'}
                       </button>
+                    </div>
+                    <div className="user-smart-feature-actions">
+                      <span className="badge user-smart-feature-badge">
+                        Partner Page: {hasPartnerPageVisibility ? 'Visible' : 'Hidden'}
+                      </span>
+                      <button
+                        className={`user-smart-feature-toggle ${
+                          hasPartnerPageVisibility ? 'enabled' : 'disabled'
+                        }`}
+                        type="button"
+                        onClick={() =>
+                          handleUpdateUserPartnerVisibility(
+                            managedUser,
+                            !hasPartnerPageVisibility,
+                          )}
+                        disabled={savingSection === partnerPageTracker}
+                      >
+                        {savingSection === partnerPageTracker
+                          ? 'Updating…'
+                          : hasPartnerPageVisibility
+                            ? 'Hide'
+                            : 'Unhide'}
+                      </button>
+                    </div>
+                    <div
+                      className="user-smart-feature-actions"
+                      style={{ alignItems: 'flex-start' }}
+                    >
+                      <span className="badge user-smart-feature-badge">
+                        Partner Category: {selectedPartnerCategoryLabel}
+                      </span>
+                      <select
+                        className="user-smart-feature-select"
+                        value={selectedPartnerCategory}
+                        onChange={(e) => {
+                          const nextCategory = String(e.target.value || '')
+                          if (!nextCategory || nextCategory === selectedPartnerCategory) return
+                          handleUpdateUserPartnerCategory(managedUser, nextCategory)
+                        }}
+                        disabled={savingSection === partnerCategoryTracker}
+                      >
+                        <option value="" disabled>
+                          Select category
+                        </option>
+                        {partnerCategoryOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 )}

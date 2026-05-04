@@ -36,6 +36,8 @@ import {
   fetchManagedUsers,
   resetManagedUserPassword,
   updateManagedUserAnalyticsAccess,
+  updateManagedUserPartnerCategory,
+  updateManagedUserPartnerVisibility,
   updateManagedUserApproval,
   updateManagedUserStatus,
 } from "../store/thunks/userManagementThunks";
@@ -1127,6 +1129,53 @@ export const useAdminApp = () => {
     }
   };
 
+  const handleUpdateUserPartnerVisibility = async (
+    targetUser,
+    partnerPageVisible,
+  ) => {
+    if (!targetUser?.id) return;
+    const tracker = `user-feature-partner-visibility-${targetUser.id}`;
+    setSavingSection(tracker);
+    try {
+      await dispatch(
+        updateManagedUserPartnerVisibility({
+          userId: targetUser.id,
+          partnerPageVisible,
+        }),
+      ).unwrap();
+      setToast(
+        partnerPageVisible
+          ? "Profile is visible on partner page"
+          : "Profile is hidden from partner page",
+      );
+    } catch (err) {
+      setToast(err.message || "Unable to update partner page visibility");
+    } finally {
+      setSavingSection(null);
+      setTimeout(() => setToast(""), 2200);
+    }
+  };
+
+  const handleUpdateUserPartnerCategory = async (targetUser, partnerCategory) => {
+    if (!targetUser?.id) return;
+    const tracker = `user-feature-partner-category-${targetUser.id}`;
+    setSavingSection(tracker);
+    try {
+      await dispatch(
+        updateManagedUserPartnerCategory({
+          userId: targetUser.id,
+          partnerCategory,
+        }),
+      ).unwrap();
+      setToast("Partner category updated");
+    } catch (err) {
+      setToast(err.message || "Unable to update partner category");
+    } finally {
+      setSavingSection(null);
+      setTimeout(() => setToast(""), 2200);
+    }
+  };
+
   const setManagedUserPasswordDraft = (userId, value) => {
     if (!userId) return;
     setUserPasswordDrafts((prev) => ({ ...prev, [userId]: value }));
@@ -1401,6 +1450,8 @@ export const useAdminApp = () => {
     handleDeleteUser,
     handleUpdateUserApproval,
     handleUpdateUserAnalyticsAccess,
+    handleUpdateUserPartnerVisibility,
+    handleUpdateUserPartnerCategory,
     setManagedUserPasswordDraft,
     toggleManagedUserPasswordVisibility,
     handleResetManagedUserPassword,
