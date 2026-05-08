@@ -7,7 +7,7 @@ Set `VITE_API_URL` in `.env`:
 Use live backend:
 
 ```env
-VITE_API_URL=https://meradevbackend.onrender.com
+VITE_API_URL=https://api.meradevtechnologies.com
 ```
 
 Use local backend:
@@ -18,7 +18,7 @@ VITE_API_URL=http://localhost:5500
 
 If `VITE_API_URL` is not set, admin auto-fallback works like this:
 - On `localhost` or `127.0.0.1` -> `http://localhost:5500`
-- Otherwise -> `https://meradevbackend.onrender.com`
+- Otherwise -> `https://api.meradevtechnologies.com`
 
 ## Run
 
